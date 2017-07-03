@@ -92,18 +92,16 @@ class AnswerSelect(object):
                     test_inputs1, test_mask1 = reformat_data(test_sources)
                     test_inputs2, test_mask2 = reformat_data(test_targets)
                     test_output = np.array(test_labels).astype('float32')
-                    print test_inputs1.shape
-                    print test_inputs2.shape
-                    print test_mask1.shape
-                    print test_mask2.shape
-                    print test_output.shape
                     cost, prediction = self.qa_net.test(test_inputs1, test_inputs2, test_mask1, test_mask2, test_output)
                     # compute accuracy
                     auc = 0.
                     for i in range(test_size):
                         if prediction[i] == 1:
                             auc += 1
-                    print "test cost: %f, accuracy: %f" % (cost, auc/test_size)
+                    for i in range(test_size, 2*test_size):
+                        if prediction[i] == 0:
+                            auc += 1
+                    print "test cost: %f, accuracy: %f" % (cost, auc/test_size/2)
 
             # decay learning rate
             if old_costs < costs/batch_idx:

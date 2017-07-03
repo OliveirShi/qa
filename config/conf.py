@@ -16,7 +16,7 @@ save_freq = 10  # int,save every n epochs
 display_step = 10  # int,display every n steps
 n_epoch = 20
 # path
-savePath = '../model/webqa/model_bestNg.ckpt'
+savePath = '../model/webqa/model_bestNg.pkl'
 vocabPath = '../data/webqa/vocab.pkl'
 embPath = '../data/webqa/webqa.bin'
 # embPath = 'data/webqa/big_webqa.bin'
