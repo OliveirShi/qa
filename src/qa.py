@@ -55,6 +55,7 @@ class AnswerSelect(object):
 
 
     def train(self):
+        print "start training..."
         old_costs = 1.
         for epoch in range(1):
             beg_time = time.time()
@@ -72,15 +73,15 @@ class AnswerSelect(object):
 
             inputs1, mask1 = reformat_data(sources)
             inputs2, mask2 = reformat_data(targets)
-            output = np.array(labels).astype('float32').reshape((n_samples, 1))
+            output = np.array(labels).astype('float32')
 
             while (batch_idx + 1) * batch_size_train < n_samples:
                 # batch input
-                in1 = inputs1[batch_idx * batch_size_train: (batch_idx + 1) * batch_size_train]
-                in2 = inputs2[batch_idx * batch_size_train: (batch_idx + 1) * batch_size_train]
+                in1 = inputs1[:, batch_idx * batch_size_train: (batch_idx + 1) * batch_size_train]
+                in2 = inputs2[:, batch_idx * batch_size_train: (batch_idx + 1) * batch_size_train]
                 out = output[batch_idx * batch_size_train: (batch_idx + 1) * batch_size_train]
-                m1 = mask1[batch_idx * batch_size_train: (batch_idx + 1) * batch_size_train]
-                m2 = mask2[batch_idx * batch_size_train: (batch_idx + 1) * batch_size_train]
+                m1 = mask1[:, batch_idx * batch_size_train: (batch_idx + 1) * batch_size_train]
+                m2 = mask2[:, batch_idx * batch_size_train: (batch_idx + 1) * batch_size_train]
                 cost = self.qa_net.train(in1, in2, m1, m2, out, self.lr)
 
                 costs += cost
@@ -88,10 +89,15 @@ class AnswerSelect(object):
                 if batch_idx % display_step == 0:
                     print "epoch: %d, batch: %d, cost: %f, lr: %f" % (epoch, batch_idx, costs/batch_idx, self.lr)
                     test_sources, test_targets, test_labels = self.get_set(is_train=False)
-                    inputs1, mask1 = reformat_data(test_sources)
-                    inputs2, mask2 = reformat_data(test_targets)
-                    output = np.array(test_labels).astype('float32').reshape((test_size, 1))
-                    cost, prediction = self.qa_net.test(inputs1, inputs2, mask1, mask2, output)
+                    test_inputs1, test_mask1 = reformat_data(test_sources)
+                    test_inputs2, test_mask2 = reformat_data(test_targets)
+                    test_output = np.array(test_labels).astype('float32')
+                    print test_inputs1.shape
+                    print test_inputs2.shape
+                    print test_mask1.shape
+                    print test_mask2.shape
+                    print test_output.shape
+                    cost, prediction = self.qa_net.test(test_inputs1, test_inputs2, test_mask1, test_mask2, test_output)
                     # compute accuracy
                     auc = 0.
                     for i in range(test_size):

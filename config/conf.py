@@ -29,4 +29,3 @@ s_size = 30
 t_size = 10
 use_jieba = True
 min_count = 1
-vocab_size = 45919

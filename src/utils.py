@@ -38,26 +38,27 @@ class PrepareData():
         for line in self.documents:
             line = line.replace('\n', '')
             if use_jieba:
-                words = jieba.cut(line)
+                words = list(jieba.cut(line))
             else:
                 words = line.decode('utf-8').strip().split()
             line2idx = []
-            if is_question:
-                for word in words:
+            if is_question:  # question sentences
+                for i in range(min(s_size, len(words))):
                     try:
-                        line2idx.append(vocab[word])
+                        line2idx.append(vocab[words[i]])
                     except:
-                        vocab[word] = len(vocab)
-                        line2idx.append(vocab[word])
+                        # print words[i]
+                        vocab[words[i]] = len(vocab)
+                        line2idx.append(vocab[words[i]])
                 sources.append(line2idx)
                 is_question = False
-            else:
-                for word in words:
+            else:  # answer sentences
+                for i in range(min(t_size, len(words))):
                     try:
-                        line2idx.append(vocab[word])
+                        line2idx.append(vocab[words[i]])
                     except:
-                        vocab[word] = len(vocab)
-                        line2idx.append(vocab[word])
+                        vocab[words[i]] = len(vocab)
+                        line2idx.append(vocab[words[i]])
                 targets.append(line2idx)
                 is_question = True
         return sources, targets, vocab

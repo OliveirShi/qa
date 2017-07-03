@@ -16,7 +16,7 @@ class QAnet(object):
         self.mask1 = T.matrix('mask1')
         self.x2 = T.imatrix('batched_inputs2')
         self.mask2 = T.matrix('mask2')
-        self.y = T.matrix('labels')
+        self.y = T.vector('labels')
         self.n_input1 = embedding_size
         self.n_input2 = embedding_size
         self.n_hidden1 = n_hidden1
