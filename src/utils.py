@@ -2,6 +2,7 @@
 import numpy as np
 import cPickle as pkl
 import jieba
+import gensim
 import random
 from config.conf import *
 
@@ -82,6 +83,29 @@ class PrepareData():
             with open(dataPkl, 'w') as f:
                 pkl.dump((self.sources, self.targets), f)
             print "loading data from corpus and save to save path..."
+
+    def get_embeddings(self):
+        vocab = self.vocab
+        try:
+            model = gensim.models.KeyedVectors.load_word2vec_format(embPath, binary=True)
+        except:
+            with open(dataTxt, 'r') as f:
+                sentences = f.readlines()
+                seg_sentences = []
+                for line in sentences:
+                    if use_jieba:
+                        seg_sentences.append(list(jieba.cut(line)))
+                    else:
+                        seg_sentences.append(list(line.decode('utf-8')))
+            model = gensim.models.Word2Vec(seg_sentences, size=embedding_size, window=3, min_count=min_count)
+            model.wv.save_word2vec_format(embPath, binary=True)
+        embeddings = np.zeros([len(vocab), embedding_size])
+        for w in vocab.keys():
+            try:
+                embeddings[vocab[w], :] = model[w]
+            except:
+                print "missing words: ", w
+        return embeddings
 
     def get_train(self):
         s = np.array(self.sources)

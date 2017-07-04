@@ -7,6 +7,7 @@ else:
     from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
 from lstm import LSTM
 from softmax import Softmax
+from logistic import Logistic
 
 
 class QAnet(object):
@@ -21,7 +22,7 @@ class QAnet(object):
         self.n_input2 = embedding_size
         self.n_hidden1 = n_hidden1
         self.n_hidden2 = n_hidden2
-        if embeddings != None:
+        if embeddings is not None:
             self.Embeddings = theano.shared(value=embeddings, name='embeddings', borrow=True)
         else:
             init_Embd = np.asarray(np.random.uniform(low=-np.sqrt(1. / vocab_size),
@@ -53,19 +54,23 @@ class QAnet(object):
         logi_len = self.n_hidden1 + self.n_hidden2
         softmax_layer = Softmax(logi_len, logits, 2)
         logi_out = softmax_layer.output
-        prediction = T.argmax(logi_out, axis=1)
-        loss = - T.mean(self.y * T.log(logi_out[:, 1]) + (1-self.y) * T.log(1.-logi_out[:, 0]))
-        self.params = [self.Embeddings,]
+        prediction = softmax_layer.predict
+        # logistic_regression = Logistic(logi_len, logits, 2)
+        # logi_out = logistic_regression.output
+        # prediction = logistic_regression.predict
+        loss = - T.mean(self.y * T.log(logi_out[:, 1]) + (1-self.y) * T.log(logi_out[:, 0]))
+        self.params = []
         self.params += branch1.params
         self.params += branch2.params
         self.params += softmax_layer.params
+        # self.params += logistic_regression.params
         # gradients
         gparams = [T.clip(T.grad(loss, p), -5, 5) for p in self.params]
         # update parameters
         updates = [(p, p - self.lr*gp) for p, gp in zip(self.params, gparams)]
 
         self.train = theano.function(inputs=[self.x1, self.x2, self.mask1, self.mask2, self.y, self.lr],
-                                     outputs=loss,
+                                     outputs=[loss, logits, logi_out],
                                      updates=updates,
                                      givens={self.is_train: np.cast['int32'](1)})
         self.test = theano.function(inputs=[self.x1, self.x2, self.mask1, self.mask2, self.y],

@@ -18,7 +18,7 @@ n_epoch = 20
 # path
 savePath = '../model/webqa/model_bestNg.pkl'
 vocabPath = '../data/webqa/vocab.pkl'
-embPath = '../data/webqa/webqa.bin'
+embPath = '../data/webqa/qa_pairs_128.bin'
 # embPath = 'data/webqa/big_webqa.bin'
 dataTxt = '../data/webqa/qa_pairs.txt'
 greatCorpus = '../data/webqa/great_corpus.txt'
