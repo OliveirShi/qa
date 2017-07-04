@@ -9,7 +9,6 @@ from config.conf import *
 from qa_net import QAnet
 
 
-
 class AnswerSelect(object):
     def __init__(self, reload_model=False):
         # load data
@@ -18,12 +17,13 @@ class AnswerSelect(object):
         self.vocab = self.data_loader.vocab
         self.vocab_size = len(self.vocab)
         # initial embeddings by word2vec
-
+        embeddings = self.data_loader.get_embeddings()
         self.lr = learning_rate
         self.decay = decay
         # create model
         print "creating model..."
-        self.qa_net = QAnet(embedding_size, hidden_size1, hidden_size2, self.vocab_size, dropout=dropout)
+        self.qa_net = QAnet(embedding_size, hidden_size1, hidden_size2, self.vocab_size,
+                            embeddings=embeddings, dropout=dropout, alpha=alpha)
 
         if reload_model is True:
             self.qa_net = load_model(savePath, self.qa_net)
@@ -57,7 +57,7 @@ class AnswerSelect(object):
     def train(self):
         print "start training..."
         old_costs = 1.
-        for epoch in range(1):
+        for epoch in range(n_epoch):
             beg_time = time.time()
             batch_idx = 0
             costs = 0.
@@ -82,28 +82,28 @@ class AnswerSelect(object):
                 out = output[batch_idx * batch_size_train: (batch_idx + 1) * batch_size_train]
                 m1 = mask1[:, batch_idx * batch_size_train: (batch_idx + 1) * batch_size_train]
                 m2 = mask2[:, batch_idx * batch_size_train: (batch_idx + 1) * batch_size_train]
-                cost = self.qa_net.train(in1, in2, m1, m2, out, self.lr)
+                cost, lg, lo = self.qa_net.train(in1, in2, m1, m2, out, self.lr)
 
                 costs += cost
                 batch_idx += 1
                 if batch_idx % display_step == 0:
+                    # print "check for logits: ", lg
+                    print "check for logi_outs: ", lo
                     print "epoch: %d, batch: %d, cost: %f, lr: %f" % (epoch, batch_idx, costs/batch_idx, self.lr)
                     test_sources, test_targets, test_labels = self.get_set(is_train=False)
                     test_inputs1, test_mask1 = reformat_data(test_sources)
                     test_inputs2, test_mask2 = reformat_data(test_targets)
                     test_output = np.array(test_labels).astype('float32')
-                    print test_inputs1.shape
-                    print test_inputs2.shape
-                    print test_mask1.shape
-                    print test_mask2.shape
-                    print test_output.shape
                     cost, prediction = self.qa_net.test(test_inputs1, test_inputs2, test_mask1, test_mask2, test_output)
                     # compute accuracy
                     auc = 0.
                     for i in range(test_size):
                         if prediction[i] == 1:
                             auc += 1
-                    print "test cost: %f, accuracy: %f" % (cost, auc/test_size)
+                    for i in range(test_size, 2*test_size):
+                        if prediction[i] == 0:
+                            auc += 1
+                    print "test cost: %f, accuracy: %f" % (cost, auc/test_size/2)
 
             # decay learning rate
             if old_costs < costs/batch_idx:
@@ -115,7 +115,7 @@ class AnswerSelect(object):
                 print "Stop early, model saved in file: ", savePath
             # save model
             if epoch % save_freq == 0:
-                save_model(save_freq, self.qa_net)
+                save_model(savePath, self.qa_net)
                 print "model saved in file: ", savePath
 
             print "epoch: %d, time consuming: %f" % (epoch, time.time() - beg_time)
