@@ -60,11 +60,8 @@ class QAnet(object):
         # logi_out = logistic_regression.output
         # prediction = logistic_regression.predict
         loss = - T.mean(self.y * T.log(logi_out[:, 1]) + (1-self.y) * T.log(logi_out[:, 0]))
-<<<<<<< HEAD
         # third cost function
         # loss = - T.sum((2 * self.y - 1) * (logi_out[:, 1] - logi_out[:, 0]))
-=======
->>>>>>> 633046f146225b022c482204ef4fe2bcbf93e69d
         self.params = []
         self.params += branch1.params
         self.params += branch2.params
