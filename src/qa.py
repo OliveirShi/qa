@@ -22,8 +22,12 @@ class AnswerSelect(object):
         self.decay = decay
         # create model
         print "creating model..."
+<<<<<<< HEAD
         self.qa_net = QAnet(embedding_size, hidden_size1, hidden_size2, self.vocab_size,
                             embeddings=embeddings, dropout=dropout, alpha=alpha)
+=======
+        self.qa_net = QAnet(embedding_size, hidden_size1, hidden_size2, self.vocab_size, embeddings=embeddings, dropout=dropout)
+>>>>>>> 633046f146225b022c482204ef4fe2bcbf93e69d
 
         if reload_model is True:
             self.qa_net = load_model(savePath, self.qa_net)
@@ -88,7 +92,11 @@ class AnswerSelect(object):
                 batch_idx += 1
                 if batch_idx % display_step == 0:
                     # print "check for logits: ", lg
+<<<<<<< HEAD
                     print "check for logi_outs: ", lo
+=======
+                    # print "check for logi_outs: ", lo
+>>>>>>> 633046f146225b022c482204ef4fe2bcbf93e69d
                     print "epoch: %d, batch: %d, cost: %f, lr: %f" % (epoch, batch_idx, costs/batch_idx, self.lr)
                     test_sources, test_targets, test_labels = self.get_set(is_train=False)
                     test_inputs1, test_mask1 = reformat_data(test_sources)
@@ -100,10 +108,17 @@ class AnswerSelect(object):
                     for i in range(test_size):
                         if prediction[i] == 1:
                             auc += 1
+<<<<<<< HEAD
                     for i in range(test_size, 2*test_size):
                         if prediction[i] == 0:
                             auc += 1
                     print "test cost: %f, accuracy: %f" % (cost, auc/test_size/2)
+=======
+                    # for i in range(test_size, 2*test_size):
+                    #     if prediction[i] == 0:
+                    #         auc += 1
+                    print "test cost: %f, accuracy: %f" % (cost, auc/test_size)
+>>>>>>> 633046f146225b022c482204ef4fe2bcbf93e69d
 
             # decay learning rate
             if old_costs < costs/batch_idx:
