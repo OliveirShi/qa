@@ -7,7 +7,7 @@ import time
 from utils import PrepareData, load_model, save_model, reformat_data
 from config.conf import *
 from qa_net import QAnet
-
+from updates import *
 
 class AnswerSelect(object):
     def __init__(self, reload_model=False):
@@ -23,7 +23,7 @@ class AnswerSelect(object):
         # create model
         print "creating model..."
         self.qa_net = QAnet(embedding_size, hidden_size1, hidden_size2, self.vocab_size,
-                            embeddings=embeddings, dropout=dropout, alpha=alpha)
+                            embeddings=embeddings, dropout=dropout, alpha=alpha, optimizer=adam)
 
         if reload_model is True:
             self.qa_net = load_model(savePath, self.qa_net)
@@ -71,9 +71,9 @@ class AnswerSelect(object):
             targets = [train_targets[idx] for idx in new_index]
             labels = [train_labels[idx] for idx in new_index]
 
-            inputs1, mask1 = reformat_data(sources)
-            inputs2, mask2 = reformat_data(targets)
-            output = np.array(labels).astype('float32')
+            inputs1, mask1 = reformat_data(sources, s_size)
+            inputs2, mask2 = reformat_data(targets, t_size)
+            output = np.array(labels).astype('int32')
 
             while (batch_idx + 1) * batch_size_train < n_samples:
                 # batch input
@@ -88,12 +88,12 @@ class AnswerSelect(object):
                 batch_idx += 1
                 if batch_idx % display_step == 0:
                     # print "check for logits: ", lg
-                    print "check for logi_outs: ", lo
+                    # print "check for logi_outs: ", lo
                     print "epoch: %d, batch: %d, cost: %f, lr: %f" % (epoch, batch_idx, costs/batch_idx, self.lr)
                     test_sources, test_targets, test_labels = self.get_set(is_train=False)
-                    test_inputs1, test_mask1 = reformat_data(test_sources)
-                    test_inputs2, test_mask2 = reformat_data(test_targets)
-                    test_output = np.array(test_labels).astype('float32')
+                    test_inputs1, test_mask1 = reformat_data(test_sources, s_size)
+                    test_inputs2, test_mask2 = reformat_data(test_targets, t_size)
+                    test_output = np.array(test_labels).astype('int32')
                     cost, prediction = self.qa_net.test(test_inputs1, test_inputs2, test_mask1, test_mask2, test_output)
                     # compute accuracy
                     auc = 0.

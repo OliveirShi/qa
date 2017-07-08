@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import theano
 import numpy as np
 import cPickle as pkl
 import jieba
@@ -85,6 +86,7 @@ class PrepareData():
             print "loading data from corpus and save to save path..."
 
     def get_embeddings(self):
+        print "getting embeddings..."
         vocab = self.vocab
         try:
             model = gensim.models.KeyedVectors.load_word2vec_format(embPath, binary=True)
@@ -122,10 +124,9 @@ class PrepareData():
                self.targets[-self.test_size-self.valid_size: -self.test_size]
 
 
-def reformat_data(seqs):
+def reformat_data(seqs, maxlen):
     lengths = [len(s) for s in seqs]
     n_samples = len(seqs)
-    maxlen = np.max(lengths)
     x = np.zeros((maxlen, n_samples)).astype('int32')
     x_mask = np.zeros((maxlen, n_samples)).astype('float32')
     for idx, s in enumerate(seqs):
@@ -134,17 +135,17 @@ def reformat_data(seqs):
     return x, x_mask
 
 
-if __name__=="__main__":
-    # path = '../data/webqa/qa_pairs.txt'
-    # data_loader = PrepareData(path, test_size)
-    # data_loader.load_data()
-    # vocab = data_loader.vocab
-    # vocab_size = len(vocab)
-    # print vocab_size
+def init_lstm_params(dim1, dim2):
+    if dim1 == dim2:  # orthogonal weights
+        return ortho_weight(dim1)
+    else:  # uniform weights
+        return np.asarray(np.random.uniform(low=-np.sqrt(1. / embedding_size),
+                                            high=np.sqrt(1. / embedding_size),
+                                            size=(dim1, dim2)),
+                          dtype=theano.config.floatX)
 
-    # reformat data
-    seqs = [[23, 44, 1, 95], [43, 55]]
-    x, m = reformat_data(seqs)
-    print x
-    print x.shape
-    print m
+
+def ortho_weight(ndim):
+    W = np.random.randn(ndim, ndim) / embedding_size
+    u, s, v = np.linalg.svd(W)
+    return u.astype(theano.config.floatX)

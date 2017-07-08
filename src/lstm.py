@@ -2,6 +2,7 @@ import numpy as np
 import theano
 import theano.tensor as T
 from config.conf import batch_size_train
+from utils import init_lstm_params
 
 
 class LSTM:
@@ -17,41 +18,21 @@ class LSTM:
         self.is_train = is_train
         self.p = p
         self.f = T.nnet.sigmoid
-        # Forget gate params
-        init_Wf = np.asarray(np.random.uniform(low=-np.sqrt(1./n_input),
-                                               high=np.sqrt(1./n_input),
-                                               size=(n_input+n_hidden, n_hidden)),
-                             dtype=theano.config.floatX)
-        init_bf = np.zeros((n_hidden,), dtype=theano.config.floatX)
-        self.Wf = theano.shared(value=init_Wf, name='Wf')
-        self.bf = theano.shared(value=init_bf, name='bf')
-        # Input gate params
-        init_Wi = np.asarray(np.random.uniform(low=-np.sqrt(1./n_input),
-                                               high=np.sqrt(1./n_input),
-                                               size=(n_input+n_hidden, n_hidden)),
-                             dtype=theano.config.floatX)
-        init_bi = np.zeros((n_hidden,), dtype=theano.config.floatX)
-        self.Wi = theano.shared(value=init_Wi, name='Wi')
-        self.bi = theano.shared(value=init_bi, name='bi')
-        # Cell gate params
-        init_Wc = np.asarray(np.random.uniform(low=-np.sqrt(1./n_input),
-                                               high=np.sqrt(1./n_input),
-                                               size=(n_input+n_hidden, n_hidden)),
-                             dtype=theano.config.floatX)
-        init_bc = np.zeros((n_hidden,), dtype=theano.config.floatX)
-        self.Wc = theano.shared(value=init_Wc, name='Wc')
-        self.bc = theano.shared(value=init_bc, name='bc')
-        # Output gate params
-        init_Wo = np.asarray(np.random.uniform(low=-np.sqrt(1./n_input),
-                                               high=np.sqrt(1./n_input),
-                                               size=(n_input+n_hidden, n_hidden)),
-                             dtype=theano.config.floatX)
-        init_bo = np.zeros((n_hidden,), dtype=theano.config.floatX)
-        self.Wo = theano.shared(value=init_Wo, name='Wo')
-        self.bo = theano.shared(value=init_bo, name='bo')
+        # initial parameters
+        lstm_W = np.concatenate([init_lstm_params(self.n_input, self.n_hidden),
+                                 init_lstm_params(self.n_input, self.n_hidden),
+                                 init_lstm_params(self.n_input, self.n_hidden),
+                                 init_lstm_params(self.n_input, self.n_hidden)], axis=1)
+        self.W = theano.shared(value=lstm_W, name='lstm_W')
+        lstm_U = np.concatenate([init_lstm_params(self.n_hidden, self.n_hidden),
+                                 init_lstm_params(self.n_hidden, self.n_hidden),
+                                 init_lstm_params(self.n_hidden, self.n_hidden),
+                                 init_lstm_params(self.n_hidden, self.n_hidden)], axis=1)
+        self.U = theano.shared(value=lstm_U, name='lstm_U')
+        lstm_b = np.zeros((4 * self.n_hidden, ), dtype=theano.config.floatX)
+        self.b = theano.shared(value=lstm_b, name='lstm_b')
         # Params
-        self.params = [self.Wi, self.Wf, self.Wc, self.Wo,
-                       self.bi, self.bf, self.bc, self.bo]
+        self.params = [self.W, self.U, self.b]
         self.build()
 
     def build(self):
@@ -63,29 +44,42 @@ class LSTM:
                 c_tm1: cell state from previous time step.
             return [h_t, c_t]
         '''
+        def _slice(_x, n, dim):
+            if _x.ndim == 3:
+                return _x[:, :, n * dim: (n + 1) * dim]
+            return _x[:, n * dim: (n + 1) * dim]
+
+
         def _recurrence(x_t, m, h_tm1, c_tm1):
-            x_e = self.Embeddings[x_t, :]
-            concated = T.concatenate([x_e, h_tm1], axis=1)
-            # Forget gate
-            f_t = self.f(T.dot(concated, self.Wf) + self.bf)
+            preact = T.dot(h_tm1, self.U)
+            preact += x_t
             # Input gate
-            i_t = self.f(T.dot(concated, self.Wi) + self.bi)
-            # Cell update
-            c_tilde_t = T.tanh(T.dot(concated, self.Wc) + self.bc)
-            c_t = f_t * c_tm1 + i_t * c_tilde_t
+            i_t = self.f(_slice(preact, 0, self.n_hidden))
             # Output gate
-            o_t = self.f(T.dot(concated, self.Wo) + self.bo)
+            f_t = self.f(_slice(preact, 1, self.n_hidden))
+            # Output gate
+            o_t = self.f(_slice(preact, 2, self.n_hidden))
+            # Cell update
+            c_tilde_t = T.tanh(_slice(preact, 3, self.n_hidden))
+            c_t = f_t * c_tm1 + i_t * c_tilde_t
+
             # hidden state
             h_t = o_t * T.tanh(c_t)
-            c_t = c_t * m[:, None]
-            h_t = h_t * m[:, None]
+            c_t = c_t * m[:, None] + c_tm1 * (1. - m)[:, None]
+            h_t = h_t * m[:, None] + h_tm1 * (1. - m)[:, None]
             return [h_t, c_t]
+
+        # embedding layer
+        emb_layer = self.Embeddings[self.x.flatten()].reshape([self.x.shape[0],
+                                                               self.x.shape[1],
+                                                               self.n_input])
+        state_below = T.dot(emb_layer, self.W) + self.b
+        # lstm layer
         [h, c], _ = theano.scan(fn=_recurrence,
-                                sequences=[self.x, self.mask],
+                                sequences=[state_below, self.mask],
                                 truncate_gradient=-1,
                                 outputs_info=[dict(initial=T.zeros((batch_size_train, self.n_hidden))),
                                               dict(initial=T.zeros((batch_size_train, self.n_hidden)))])
-        # self.activation = h
         # sampling layer with average sampling
         h = (h * self.mask[:, :, None]).sum(axis=0)
         h = h / self.mask.sum(axis=0)[:, None]
