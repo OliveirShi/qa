@@ -68,10 +68,12 @@ class QAnet(object):
         # logi_out = softmax_layer.output
         # prediction = softmax_layer.predict
         # logistic regression
-        logistic_regression = Logistic(logi_len, logits, 2)
+        logistic_regression = Logistic(logi_len, logits, 1)
         logi_out = logistic_regression.output
         prediction = logistic_regression.predict
-        loss = - T.sum(self.y * T.log(logi_out[:, 1]) + (1-self.y) * T.log(logi_out[:, 0]))
+        # loss = - T.sum(self.y * T.log(logi_out[:, 1]) + (1-self.y) * T.log(logi_out[:, 0]))
+
+        loss = -T.sum(self.y * T.log(logi_out[:, 0]) + (1 - self.y) * T.log(1 - logi_out[:, 0]))
         # loss = T.mean(T.nnet.crossentropy_categorical_1hot(logi_out, self.y))
         self.params = [self.Embeddings, self.proj_M, self.proj_b]
         self.params += branch1.params
@@ -82,7 +84,9 @@ class QAnet(object):
         gparams = [T.clip(T.grad(loss, p), -10, 10) for p in self.params]
         # update parameters
         updates = self.optimizer(params=self.params, gparams=gparams, learning_rate=self.lr)
-
+        # self.showShape = theano.function(inputs=[self.x1, self.x2, self.mask1, self.mask2, self.y],
+        #                                  outputs=[self.y.shape, logi_out.shape],
+        #                                  givens={self.is_train: np.cast['int32'](0)})
         self.train = theano.function(inputs=[self.x1, self.x2, self.mask1, self.mask2, self.y, self.lr],
                                      outputs=[loss, logits, logi_out],
                                      updates=updates,
@@ -91,5 +95,5 @@ class QAnet(object):
                                     outputs=[loss, prediction],
                                     givens={self.is_train: np.cast['int32'](0)})
         self.predict = theano.function(inputs=[self.x1, self.x2, self.mask1, self.mask2],
-                                       outputs=prediction,
+                                       outputs=logi_out,
                                        givens={self.is_train: np.cast['int32'](0)})

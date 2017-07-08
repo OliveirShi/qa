@@ -98,10 +98,10 @@ class AnswerSelect(object):
                     # compute accuracy
                     auc = 0.
                     for i in range(test_size):
-                        if prediction[i] == 1:
+                        if prediction[i] > 0.5:
                             auc += 1
                     for i in range(test_size, 2*test_size):
-                        if prediction[i] == 0:
+                        if prediction[i] <= 0:
                             auc += 1
                     print "test cost: %f, accuracy: %f" % (cost, auc/test_size/2)
 

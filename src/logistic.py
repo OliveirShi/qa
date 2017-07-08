@@ -19,4 +19,5 @@ class Logistic(object):
         self.params = [self.W, self.b]
 
         self.output = T.nnet.sigmoid(T.dot(self.x, self.W) + self.b)
-        self.predict = T.argmax(self.output, axis=1)
+        # self.predict = T.argmax(self.output, axis=1)
+        self.predict = self.output > 0.5
